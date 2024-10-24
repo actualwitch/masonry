@@ -1,7 +1,12 @@
 "use client";
 import { SCALING } from "@/const";
 import { getWallPlan, HORIZONTAL_CHOICES } from "@/planning";
-import { BuiltStatus, greedyStrategy, Strategy, stridesStrategy } from "@/strategy";
+import {
+  BuiltStatus,
+  greedyStrategy,
+  Strategy,
+  stridesStrategy,
+} from "@/strategy";
 import {
   Container,
   Wall,
@@ -12,7 +17,6 @@ import {
   Page,
 } from "@/style";
 import { Fragment, useEffect, useState } from "react";
-
 
 export const useBuiltState = (
   wallPlan: ReturnType<typeof getWallPlan>,
@@ -26,9 +30,9 @@ export const useBuiltState = (
         if (strategy === "greedy") {
           setBuilt((built) => greedyStrategy(built, wallPlan));
         }
-        if (strategy === "strides") {
-          setBuilt((built) => stridesStrategy(built, wallPlan));
-        }
+        // if (strategy === "strides") {
+        //   setBuilt((built) => stridesStrategy(built, wallPlan));
+        // }
       }
     };
     window.addEventListener("keydown", listener);
@@ -55,13 +59,16 @@ export default function Home() {
                   {row.map((choice, index) => {
                     if (choice === 0 || choice === 1) {
                       const [width, height] = HORIZONTAL_CHOICES[choice];
+                      const builtStatus = built?.[rowIndex]?.[index] ?? 0;
                       return (
                         <Brick
                           key={index}
                           $width={`${width * SCALING}mm`}
                           $height={`${height * SCALING}mm`}
-                          $isBuilt={built?.[rowIndex]?.[index] || false}
-                        />
+                          $isBuilt={builtStatus > 0}
+                        >
+                          {builtStatus ? builtStatus : ''}
+                        </Brick>
                       );
                     }
                     if (choice === 2) {

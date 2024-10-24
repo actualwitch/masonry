@@ -31,6 +31,10 @@ export const Brick = styled.div<{
   $isBuilt: boolean;
 }>`
   background: ${(props) => (props.$isBuilt ? "red" : "#4f7dea80")};
+  color: black;
+  font-size: 10px;
+  display: grid;
+    place-items: center;
   width: ${(props) => props.$width};
   height: ${(props) => props.$height};
 `;

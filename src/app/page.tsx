@@ -8,7 +8,7 @@ import {
   WALL_WIDTH_MM,
 } from "@/const";
 import path from "path";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
 const Container = styled.main`
@@ -19,14 +19,13 @@ const Container = styled.main`
 const SCALING = 0.075;
 
 const Wall = styled.div`
-  background: gray;
   width: ${WALL_WIDTH_MM * SCALING}mm;
   height: ${WALL_HEIGHT_MM * SCALING}mm;
   display: flex;
   flex-direction: column-reverse;
 `;
 
-const Row = styled.div`
+const StyleoRow = styled.div`
   display: flex;
 `;
 
@@ -37,8 +36,8 @@ const [FULL_BRICK_WIDTH, FULL_BRICK_HEIGHT] = FULL_BRICK_MM;
 
 const [HALF_BRICK_WIDTH, HALF_BRICK_HEIGHT] = HALF_BRICK_MM;
 
-const Brick = styled.div<{ width: string; height: string }>`
-  background: #4f7dea80;
+const Brick = styled.div<{ width: string; height: string; isBuilt: boolean }>`
+  background: ${(props) => (props.isBuilt ? "red" : "#4f7dea80")};
   width: ${(props) => props.width};
   height: ${(props) => props.height};
 `;
@@ -63,7 +62,7 @@ const validatePath = (path: Array<0 | 1 | 2>) => {
   return width === WALL_WIDTH_MM;
 };
 
-const mapPath = (shouldStartWithHalfBrick: boolean) => {
+const planRow = (shouldStartWithHalfBrick: boolean) => {
   const budget = WALL_WIDTH_MM;
   let built = 0;
   const path: Array<0 | 1 | 2> = [];
@@ -105,30 +104,9 @@ const mapPath = (shouldStartWithHalfBrick: boolean) => {
   }
   return path;
 };
-
-function* generateRow(shouldStartWithHalfBrick: boolean) {
-  for (const [key, choice] of mapPath(shouldStartWithHalfBrick).entries()) {
-    if (choice === 0 || choice === 1) {
-      const [width, height] = CHOICES[choice];
-      yield (
-        <Brick
-          key={key}
-          width={`${width * SCALING}mm`}
-          height={`${height * SCALING}mm`}
-        />
-      );
-      continue;
-    }
-    if (choice === 2) {
-      yield <HeadJoint key={key} />;
-      continue;
-    }
-  }
-}
-
 const VERTICAL_CHOICES = [FULL_BRICK_MM, BED_JOINT_MM] as const;
 
-function* generateWall() {
+function planWall() {
   const budget = WALL_HEIGHT_MM;
   let built = 0;
   const path: Array<0 | 1> = [];
@@ -156,26 +134,87 @@ function* generateWall() {
     // todo backtracking
     throw new Error("unreachable");
   }
-  for (const [key, choice] of path.entries()) {
-    if (choice === 0) {
-      yield <Row key={key}>{[...generateRow(key % 4 === 0)]}</Row>;
-      continue;
-    }
-    if (choice === 1) {
-      yield <BedJoint key={key} />;
-      continue;
-    }
-  }
+  return path
+    .filter((choice) => choice === 0)
+    .map((_, index) => [...planRow(index % 2 === 0)]);
 }
 
 export default function Home() {
-  const model = useMemo(() => {
-    return [...generateWall()];
-  }, []);
+  const wallPlan = planWall();
+
+  const [built, setBuilt] = useState<boolean[][]>([[]]);
+
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        setBuilt((built) => {
+          const selectedRowIndex = built.length - 1;
+          const selectedRow = built[selectedRowIndex].filter(Boolean);
+          if (selectedRow.length < wallPlan[selectedRowIndex].length) {
+            const newLength = Math.min(
+              selectedRow.length + 2,
+              wallPlan[selectedRowIndex].length
+            );
+            const newRow = wallPlan[selectedRowIndex].map(
+              (_, index) => index < newLength
+            );
+            if (selectedRowIndex % 2 === 1) {
+              newRow.reverse();
+            }
+            return built.map((row, index) => {
+              if (index === selectedRowIndex) {
+                return newRow;
+              }
+              return row;
+            });
+          }
+          if (selectedRowIndex < wallPlan.length - 1) {
+            const newRowIndex = selectedRowIndex + 1;
+            const newRow = wallPlan[newRowIndex].map((_, index) => index < 1);
+            if (newRowIndex % 2 === 1) {
+              newRow.reverse();
+            }
+            return [...built, newRow];
+          }
+          return built;
+        });
+      }
+    };
+    window.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  }, [setBuilt]);
   return (
     <div>
       <Container>
-        <Wall>{model}</Wall>
+        <Wall>
+          {wallPlan.map((row, rowIndex) => {
+            return (
+              <>
+                <StyleoRow key={String(rowIndex) + "bricks"}>
+                  {row.map((choice, index) => {
+                    if (choice === 0 || choice === 1) {
+                      const [width, height] = CHOICES[choice];
+                      return (
+                        <Brick
+                          key={index}
+                          width={`${width * SCALING}mm`}
+                          height={`${height * SCALING}mm`}
+                          isBuilt={built?.[rowIndex]?.[index]}
+                        />
+                      );
+                    }
+                    if (choice === 2) {
+                      return <HeadJoint key={index} />;
+                    }
+                  })}
+                </StyleoRow>
+                <BedJoint key={String(rowIndex) + "joint"} />
+              </>
+            );
+          })}
+        </Wall>
       </Container>
     </div>
   );

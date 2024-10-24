@@ -7,6 +7,7 @@ import {
   WALL_HEIGHT_MM,
   WALL_WIDTH_MM,
 } from "@/const";
+import path from "path";
 import { useMemo } from "react";
 import styled from "styled-components";
 
@@ -29,7 +30,6 @@ const Row = styled.div`
   display: flex;
 `;
 
-
 const [HEAD_JOINT_WIDTH, HEAD_JOINT_HEIGHT] = HEAD_JOINT_MM;
 const CHOICES = [FULL_BRICK_MM, HALF_BRICK_MM, HEAD_JOINT_MM] as const;
 
@@ -38,27 +38,40 @@ const [FULL_BRICK_WIDTH, FULL_BRICK_HEIGHT] = FULL_BRICK_MM;
 const [HALF_BRICK_WIDTH, HALF_BRICK_HEIGHT] = HALF_BRICK_MM;
 
 const Brick = styled.div<{ width: string; height: string }>`
-  background: blue;
+  background: #4f7dea80;
   width: ${(props) => props.width};
   height: ${(props) => props.height};
 `;
 
 const HeadJoint = styled.div`
-  background: red;
+  background: #ffcbf980;
   width: ${HEAD_JOINT_WIDTH * SCALING}mm;
   height: ${HEAD_JOINT_HEIGHT * SCALING}mm;
 `;
 
 const BedJoint = styled.div`
-  background: green;
+  background: #ffcbf980;
   width: 100%;
   height: ${BED_JOINT_MM * SCALING}mm;
 `;
 
-function* generateRow() {
+const validatePath = (path: Array<0 | 1 | 2>) => {
+  const width = path.reduce<number>((acc, choice) => {
+    const width = CHOICES[choice][0];
+    return acc + width;
+  }, 0);
+  return width === WALL_WIDTH_MM;
+};
+
+const mapPath = (shouldStartWithHalfBrick: boolean) => {
   const budget = WALL_WIDTH_MM;
   let built = 0;
   const path: Array<0 | 1 | 2> = [];
+  if (shouldStartWithHalfBrick) {
+    built += HALF_BRICK_WIDTH + HEAD_JOINT_WIDTH;
+    path.push(1);
+    path.push(2);
+  }
   while (true) {
     const remaining = budget - built;
     if (remaining >= FULL_BRICK_WIDTH + HEAD_JOINT_WIDTH) {
@@ -87,7 +100,14 @@ function* generateRow() {
     // todo backtracking
     throw new Error("unreachable");
   }
-  for (const [key, choice] of path.entries()) {
+  if (!validatePath(path)) {
+    console.error("invalid path", path);
+  }
+  return path;
+};
+
+function* generateRow(shouldStartWithHalfBrick: boolean) {
+  for (const [key, choice] of mapPath(shouldStartWithHalfBrick).entries()) {
     if (choice === 0 || choice === 1) {
       const [width, height] = CHOICES[choice];
       yield (
@@ -105,7 +125,6 @@ function* generateRow() {
     }
   }
 }
-
 
 const VERTICAL_CHOICES = [FULL_BRICK_MM, BED_JOINT_MM] as const;
 
@@ -134,17 +153,12 @@ function* generateWall() {
     if (remaining === 0) {
       break;
     }
-    console.log("remaining", remaining);
     // todo backtracking
     throw new Error("unreachable");
   }
   for (const [key, choice] of path.entries()) {
-    if (choice === 0 ) {
-      yield (
-        <Row key={key}>
-          {[...generateRow()]}
-        </Row>
-      )
+    if (choice === 0) {
+      yield <Row key={key}>{[...generateRow(key % 4 === 0)]}</Row>;
       continue;
     }
     if (choice === 1) {
@@ -161,9 +175,7 @@ export default function Home() {
   return (
     <div>
       <Container>
-        <Wall>
-          {[...model]}
-        </Wall>
+        <Wall>{model}</Wall>
       </Container>
     </div>
   );

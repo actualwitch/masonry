@@ -16,23 +16,32 @@ import {
   BedJoint,
   Page,
 } from "@/style";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
-export const useBuiltState = (
-  wallPlan: ReturnType<typeof getWallPlan>,
-  strategy: Strategy
-) => {
+export default function Home() {
   const [built, setBuilt] = useState<BuiltStatus>([[]]);
-
+  const [strategy, setStrategy] = useState<Strategy>("greedy");
+  useEffect(() => {
+    setBuilt([[]]);
+  }, [strategy]);
+  const wallPlan = getWallPlan();
+  const advance = useMemo(() => {
+    if (strategy === "greedy") {
+      return () => {
+        setBuilt((built) => greedyStrategy(built, wallPlan));
+      };
+    }
+    if (strategy === "strides") {
+      const iterator = stridesStrategy(wallPlan);
+      return () => {
+        setBuilt(iterator.next().value);
+      };
+    }
+  }, [strategy]);
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
-        if (strategy === "greedy") {
-          setBuilt((built) => greedyStrategy(built, wallPlan));
-        }
-        // if (strategy === "strides") {
-        //   setBuilt((built) => stridesStrategy(built, wallPlan));
-        // }
+        advance();
       }
     };
     window.addEventListener("keydown", listener);
@@ -40,14 +49,6 @@ export const useBuiltState = (
       window.removeEventListener("keydown", listener);
     };
   }, [setBuilt, strategy]);
-
-  return built;
-};
-
-export default function Home() {
-  const [strategy, setStrategy] = useState<Strategy>("greedy");
-  const wallPlan = getWallPlan();
-  const built = useBuiltState(wallPlan, strategy);
   return (
     <Page>
       <Container>
@@ -67,7 +68,7 @@ export default function Home() {
                           $height={`${height * SCALING}mm`}
                           $isBuilt={builtStatus > 0}
                         >
-                          {builtStatus ? builtStatus : ''}
+                          {builtStatus ? builtStatus : ""}
                         </Brick>
                       );
                     }

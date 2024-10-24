@@ -1,4 +1,4 @@
-import { getWallPlan } from "./planning";
+import { getWallPlan, HORIZONTAL_CHOICES, HorizontalOptions } from "./planning";
 
 export type Strategy = "greedy" | "strides";
 
@@ -32,7 +32,9 @@ export const greedyStrategy = (
   }
   if (selectedRowIndex < wallPlan.length - 1) {
     const newRowIndex = selectedRowIndex + 1;
-    const newRow = wallPlan[newRowIndex].map((_, index) => (index < 1 ? newRowIndex + 1 : 0));
+    const newRow = wallPlan[newRowIndex].map((_, index) =>
+      index < 1 ? newRowIndex + 1 : 0
+    );
     const shouldAleternate = newRowIndex % 2 === 1;
     if (shouldAleternate) {
       newRow.reverse();
@@ -42,26 +44,55 @@ export const greedyStrategy = (
   return built;
 };
 
-export const stridesStrategy = (
-  built: BuiltStatus,
-  wallPlan: ReturnType<typeof getWallPlan>
-) => {
-  const newBuilt = built.map((row) => [...row]);
-//   if (built.length === 1 && built[0].length === 0) {
-//     return wallPlan.map((row, rowIndex) => row.map)
-//   console.log(built, wallPlan)
-//   let stride = 0;
-//   let x = 0;
-//   let y = wallPlan.length - 1;
-//   while (true) {
-//     const selectedRow = newBuilt[y];
-//     if (selectedRow.length === wallPlan[y].length) {
-//       y += 1;
-//       stride += built[y].length;
-//       continue;
-//     }
-    
-//   }
+function getPlacedRowWidth(row: number[], wallPlanRow: number[]) {
+  return row.reduce((acc, item, index) => {
+    if (item) {
+      const itemType = wallPlanRow[index];
+      return acc + HORIZONTAL_CHOICES[itemType][0];
+    }
+    return acc;
+  }, 0);
+}
 
-  return wallPlan.map((row) => row.map(() => 0));
-};
+// alternative strategy that grows the height quickly
+export function* stridesStrategy(wallPlan: ReturnType<typeof getWallPlan>) {
+  let newBuilt = wallPlan.map((row) => row.map(() => 0));
+  let stride = 1;
+  let x = 0;
+  let y = 0;
+  while (true) {
+    if (y > 0) {
+      const prevRowWidth = getPlacedRowWidth(newBuilt[y - 1], wallPlan[y - 1]);
+      const newBrickWidth = HORIZONTAL_CHOICES[wallPlan[y][0]][0];
+      console.log(prevRowWidth, newBrickWidth);
+      if (prevRowWidth <= newBrickWidth) {
+        y = 0;
+        stride += 1;
+        continue;
+      }
+    }
+    const placedBricks = newBuilt[y].filter(Boolean).length;
+    let advanceBy = 1;
+    if (
+      wallPlan[y][placedBricks + advanceBy] === HorizontalOptions.HEAD_JOINT
+    ) {
+      advanceBy += 1;
+    }
+    const newRow = wallPlan[y].map((_, index) => {
+      if (newBuilt[y][index]) {
+        return newBuilt[y][index];
+      }
+      if (index < placedBricks + advanceBy) {
+        return stride;
+      }
+      return 0;
+    });
+
+    newBuilt = [
+      ...newBuilt.map((row, index) => [...(index === y ? newRow : row)]),
+    ];
+    yield newBuilt;
+    // const canPlaceBrick = thisRowWidth
+    y += 1;
+  }
+}

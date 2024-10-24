@@ -13,7 +13,7 @@ export const HORIZONTAL_CHOICES = [
   HEAD_JOINT_MM,
 ] as const;
 
-enum HorizontalOptions {
+export enum HorizontalOptions {
   FULL_BRICK = 0,
   HALF_BRICK = 1,
   HEAD_JOINT = 2,

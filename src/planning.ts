@@ -37,9 +37,9 @@ enum VerticalOptions {
   BED_JOINT = 1,
 }
 
-const validatePath = (path: Array<HorizontalOptions>) => {
+const validatePath = (path: Array<HorizontalOptions>, orientation = 0) => {
   const width = path.reduce<number>((acc, choice) => {
-    const width = HORIZONTAL_CHOICES[choice][0];
+    const width = HORIZONTAL_CHOICES[choice][orientation];
     return acc + width;
   }, 0);
   return width === WALL_WIDTH_MM;
@@ -124,7 +124,7 @@ export const planHeaderRow = (index: number, orientation = 1) => {
     // todo backtracking
     throw new Error("unreachable");
   }
-  if (!validatePath(path)) {
+  if (!validatePath(path, orientation)) {
     console.error("invalid path", path);
   }
   return path;
@@ -161,12 +161,13 @@ export function getWallPlan(bond = "stretcher" as "stretcher" | "english") {
     throw new Error("unreachable");
   }
   // remove joints, they were only used to calculate solution and are later added visually using css
-  const filtered = path.filter((choice) => choice === 0);
+  const onlyBricks = path.filter((choice) => choice === 0);
   if (bond === "english") {
-    return filtered.map((_, index) => [
-      ...(index % 2 === 0 ? planHeaderRow(index) : planRow(false)),
-    ]);
+    return onlyBricks.map((_, index) => {
+      const isEven = index % 2 === 0;
+      return [...(isEven ? planHeaderRow(index) : planRow(false))];
+    });
   }
   // plan each row alternating between starting with full brick and half brick
-  return filtered.map((_, index) => [...planRow(index % 2 === 1)]);
+  return onlyBricks.map((_, index) => [...planRow(index % 2 === 1)]);
 }

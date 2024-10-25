@@ -59,11 +59,13 @@ export function* heightFirst(
   wallPlan: ReturnType<typeof getWallPlan>,
   bond: Bond
 ) {
+  // generate empty built mask
   let newBuilt = wallPlan.map((row) => row.map(() => 0));
   let stride = 1;
   let y = 0;
   while (true) {
     if (y > 0) {
+      // check if it's possible to place a brick on the next row
       const prevRowWidth = getPlacedRowWidth(
         newBuilt[y - 1],
         wallPlan[y - 1],
@@ -75,6 +77,7 @@ export function* heightFirst(
           bond === "english" ? (y % 2 === 0 ? 1 : 0) : 0
         ];
       if (nextBrickType !== undefined && prevRowWidth <= nextBrickWidth) {
+        // if not, move back and increment stride counter
         y = 0;
         stride += 1;
         continue;
@@ -82,18 +85,22 @@ export function* heightFirst(
     }
     const placedBricks = newBuilt[y].filter(Boolean).length;
     let advanceBy = 1;
+    // head joints are also included in the plan, so we account for that
     if (
       wallPlan[y]?.[placedBricks + advanceBy] === HorizontalOptions.HEAD_JOINT
     ) {
       advanceBy += 1;
     }
     const newRow = wallPlan[y]?.map((_, index) => {
+      // if the brick is already placed, we don't modify it
       if (newBuilt[y][index]) {
         return newBuilt[y][index];
       }
+      // mark new bricks with current stride
       if (index < placedBricks + advanceBy) {
         return stride;
       }
+      // remaining ones aren't built yet
       return 0;
     });
 
@@ -105,20 +112,19 @@ export function* heightFirst(
   }
 }
 
-
 /**
  * calculate width of the row based on the placed bricks and the wall plan
  */
 function getPlacedRowWidth(
-    row: number[],
-    wallPlanRow: number[],
-    orientation = 0
-  ) {
-    return row.reduce((acc, item, index) => {
-      if (item) {
-        const itemType = wallPlanRow[index];
-        return acc + HORIZONTAL_CHOICES[itemType][orientation];
-      }
-      return acc;
-    }, 0);
-  }
+  row: number[],
+  wallPlanRow: number[],
+  orientation = 0
+) {
+  return row.reduce((acc, item, index) => {
+    if (item) {
+      const itemType = wallPlanRow[index];
+      return acc + HORIZONTAL_CHOICES[itemType][orientation];
+    }
+    return acc;
+  }, 0);
+}

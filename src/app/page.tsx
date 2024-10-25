@@ -1,6 +1,6 @@
 "use client";
 import { SCALING } from "@/const";
-import { getWallPlan, HORIZONTAL_CHOICES } from "@/planning";
+import { getWallPlan, HORIZONTAL_CHOICES, HorizontalOptions } from "@/planning";
 import {
   Bond,
   breadthFirst,
@@ -69,30 +69,28 @@ export default function Home() {
             return (
               <Fragment key={String(rowIndex)}>
                 <StyleoRow>
-                  {row.map((choice, index) => {
-                    if (choice === 0 || choice === 1 || choice === 3) {
-                      const isEven = index % 2 === 0;
-                      const orientation =
-                        bond === "english" ? (isEven ? 0 : 1) : 0;
-                      const builtStatus = built?.[rowIndex]?.[index] ?? 0;
-                      return (
-                        <Brick
-                          key={index}
-                          $width={`${
-                            HORIZONTAL_CHOICES[choice][orientation] * SCALING
-                          }mm`}
-                          $height={`${
-                            HORIZONTAL_CHOICES[choice][2] * SCALING
-                          }mm`}
-                          $isBuilt={builtStatus > 0}
-                        >
-                          {builtStatus ? builtStatus : ""}
-                        </Brick>
-                      );
-                    }
-                    if (choice === 2) {
+                  {row.map((item, index) => {
+                    if (item === HorizontalOptions.HEAD_JOINT) {
                       return <HeadJoint key={index} />;
                     }
+
+                    const isEven = index % 2 === 0;
+                    const orientation =
+                      bond === "english" ? (isEven ? 0 : 1) : 0;
+                    const builtStatus = built?.[rowIndex]?.[index] ?? 0;
+
+                    return (
+                      <Brick
+                        key={index}
+                        $width={`${
+                          HORIZONTAL_CHOICES[item][orientation] * SCALING
+                        }mm`}
+                        $height={`${HORIZONTAL_CHOICES[item][2] * SCALING}mm`}
+                        $isBuilt={builtStatus > 0}
+                      >
+                        {builtStatus ? builtStatus : ""}
+                      </Brick>
+                    );
                   })}
                 </StyleoRow>
                 <BedJoint />

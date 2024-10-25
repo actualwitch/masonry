@@ -2,53 +2,65 @@
 import { SCALING } from "@/const";
 import { getWallPlan, HORIZONTAL_CHOICES } from "@/planning";
 import {
+  Bond,
+  breadthFirst,
   BuiltStatus,
-  greedyStrategy,
+  heightFirst,
   Strategy,
-  stridesStrategy,
 } from "@/strategy";
 import {
-  Container,
-  Wall,
-  StyleoRow,
-  Brick,
-  HeadJoint,
+  Aside,
   BedJoint,
+  Brick,
+  Container,
+  HeadJoint,
   Page,
+  StyleoRow,
+  Wall,
 } from "@/style";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 export default function Home() {
   const [built, setBuilt] = useState<BuiltStatus>([[]]);
-  const [strategy, setStrategy] = useState<Strategy>("greedy");
+  const [strategy, setStrategy] = useState<Strategy>("breadth");
+  const [bond, setBond] = useState<Bond>("stretcher");
   useEffect(() => {
     setBuilt([[]]);
-  }, [strategy]);
-  const wallPlan = getWallPlan();
+  }, [strategy, bond]);
+
+  // create plan first
+  const wallPlan = useMemo(() => {
+    return getWallPlan(bond);
+  }, [bond]);
+
+  // create advance function
   const advance = useMemo(() => {
-    if (strategy === "greedy") {
+    if (strategy === "breadth") {
       return () => {
-        setBuilt((built) => greedyStrategy(built, wallPlan));
+        setBuilt((built) => breadthFirst(built, wallPlan));
       };
     }
-    if (strategy === "strides") {
-      const iterator = stridesStrategy(wallPlan);
+    if (strategy === "height") {
+      const iterator = heightFirst(wallPlan, bond);
       return () => {
         setBuilt(iterator.next().value);
       };
     }
-  }, [strategy]);
+  }, [strategy, wallPlan, bond]);
+
+  // trigger advance on enter
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
-        advance();
+        advance?.();
       }
     };
     window.addEventListener("keydown", listener);
     return () => {
       window.removeEventListener("keydown", listener);
     };
-  }, [setBuilt, strategy]);
+  }, [setBuilt, advance]);
+
   return (
     <Page>
       <Container>
@@ -58,14 +70,20 @@ export default function Home() {
               <Fragment key={String(rowIndex)}>
                 <StyleoRow>
                   {row.map((choice, index) => {
-                    if (choice === 0 || choice === 1) {
-                      const [width, height] = HORIZONTAL_CHOICES[choice];
+                    if (choice === 0 || choice === 1 || choice === 3) {
+                      const isEven = index % 2 === 0;
+                      const orientation =
+                        bond === "english" ? (isEven ? 0 : 1) : 0;
                       const builtStatus = built?.[rowIndex]?.[index] ?? 0;
                       return (
                         <Brick
                           key={index}
-                          $width={`${width * SCALING}mm`}
-                          $height={`${height * SCALING}mm`}
+                          $width={`${
+                            HORIZONTAL_CHOICES[choice][orientation] * SCALING
+                          }mm`}
+                          $height={`${
+                            HORIZONTAL_CHOICES[choice][2] * SCALING
+                          }mm`}
                           $isBuilt={builtStatus > 0}
                         >
                           {builtStatus ? builtStatus : ""}
@@ -83,15 +101,28 @@ export default function Home() {
           })}
         </Wall>
       </Container>
-      <aside>
-        <select
-          value={strategy}
-          onChange={(event) => setStrategy(event.target.value as Strategy)}
-        >
-          <option value="greedy">Greedy</option>
-          <option value="strides">Strides</option>
-        </select>
-      </aside>
+      <Aside>
+        <label>
+          Bond
+          <select
+            value={bond}
+            onChange={(event) => setBond(event.target.value as Bond)}
+          >
+            <option value="stretcher">Stretcher</option>
+            <option value="english">English</option>
+          </select>
+        </label>
+        <label>
+          Strategy
+          <select
+            value={strategy}
+            onChange={(event) => setStrategy(event.target.value as Strategy)}
+          >
+            <option value="breadth">Breadth</option>
+            <option value="height">Height</option>
+          </select>
+        </label>
+      </Aside>
     </Page>
   );
 }

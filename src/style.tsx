@@ -7,7 +7,7 @@ import {
   WALL_WIDTH_MM,
 } from "./const";
 
-const [HEAD_JOINT_WIDTH, HEAD_JOINT_HEIGHT] = HEAD_JOINT_MM;
+const [HEAD_JOINT_WIDTH, _, HEAD_JOINT_HEIGHT] = HEAD_JOINT_MM;
 
 export const Container = styled.main`
   display: grid;
@@ -34,7 +34,7 @@ export const Brick = styled.div<{
   color: black;
   font-size: 10px;
   display: grid;
-    place-items: center;
+  place-items: center;
   width: ${(props) => props.$width};
   height: ${(props) => props.$height};
 `;
@@ -48,7 +48,7 @@ export const HeadJoint = styled.div`
 export const BedJoint = styled.div`
   background: #ffcbf980;
   width: 100%;
-  height: ${BED_JOINT_MM * SCALING}mm;
+  height: ${BED_JOINT_MM[1] * SCALING}mm;
 `;
 
 export const Page = styled.div`
@@ -56,9 +56,18 @@ export const Page = styled.div`
   align-items: center;
   gap: 1rem;
   ${Container} {
-  flex: 1;
+    flex: 1;
   }
   aside {
     flex: 0 0 200px;
+  }
+`;
+
+export const Aside = styled.aside`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  select {
+    margin-left: 1rem;
   }
 `;
